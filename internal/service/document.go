@@ -51,8 +51,6 @@ func (s *documentService) CreateDocument(title string, sheetsCount int, folderID
 
 	err := s.docRepo.CreateDocument(document)
 	if err != nil {
-		// If we reserved space but failed to create doc, we need to rollback?
-		// This is a complex scenario. For production, use transactions.
 		return nil, err
 	}
 
@@ -80,11 +78,6 @@ func (s *documentService) UpdateDocument(id uint, title *string, sheetsCount *in
 		document.SheetsCount = *sheetsCount
 	}
 
-	// Handle folder change logic with transaction
-	// For simplicity, we'll outline the logic without actual transaction handling here.
-	// In production, you would use s.db.Transaction(...)
-
-	// 1. If folder is being changed (to a new one or to nil)...
 	if folderID != nil && (oldFolderID == nil || *folderID != *oldFolderID) {
 		// ...free space in the old folder
 		if oldFolderID != nil {
