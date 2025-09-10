@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build: .
@@ -5,25 +7,28 @@ services:
       - "8080:8080"
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_healthy  # Ждем пока БД будет готова
+    env_file:
+      - .env 
     volumes:
-      - ./config.yml:/app/config.yml
+      - ./.env:/app/.env  
       - ./app.log:/app/app.log
     restart: unless-stopped
 
   db:
     image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD} #Берем из .env
+      POSTGRES_DB: ${DB_NAME}           #Берем из .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: "password" #ВЫНЕСТИ В .env
-      POSTGRES_DB: folder_system
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
 volumes:
   postgres_data:

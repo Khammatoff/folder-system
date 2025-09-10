@@ -1,81 +1,91 @@
 package config
 
 import (
-	"io"
+	"log"
 	"os"
+	"strconv"
 
-	"gopkg.in/yaml.v3"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	JWT      JWTConfig      `yaml:"jwt"`
-	Logging  LoggingConfig  `yaml:"logging"`
+	Server   ServerConfig
+	Database DatabaseConfig
+	JWT      JWTConfig
+	Logging  LoggingConfig
 }
 
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
+	Host string
+	Port string
 }
 
 type DatabaseConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"dbname"`
-	SSLMode  string `yaml:"sslmode"`
+	Host     string
+	Port     string
+	User     string
+	Password string
+	DBName   string
+	SSLMode  string
 }
 
 type JWTConfig struct {
-	AccessSecret  string `yaml:"access_secret"`
-	RefreshSecret string `yaml:"refresh_secret"`
-	AccessTTL     int    `yaml:"access_ttl"`
-	RefreshTTL    int    `yaml:"refresh_ttl"`
+	AccessSecret  string
+	RefreshSecret string
+	AccessTTL     int
+	RefreshTTL    int
 }
 
 type LoggingConfig struct {
-	Level string `yaml:"level"`
-	File  string `yaml:"file"`
+	Level string
+	File  string
 }
 
-func LoadConfig(path string) (*Config, error) {
-	// Открываем файл конфигурации
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	// Читаем содержимое файла
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
+func LoadConfig() (*Config, error) {
+	// Загружаем .env файл
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
 	}
 
-	// Парсим YAML
-	cfg := &Config{}
-	err = yaml.Unmarshal(data, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	// Устанавливаем значения по умолчанию, если нужно
-	if cfg.Server.Host == "" {
-		cfg.Server.Host = "0.0.0.0"
-	}
-	if cfg.Server.Port == "" {
-		cfg.Server.Port = "8080"
-	}
-
-	return cfg, nil
+	return &Config{
+		Server: ServerConfig{
+			Host: getEnv("SERVER_HOST", "0.0.0.0"),
+			Port: getEnv("SERVER_PORT", "8080"),
+		},
+		Database: DatabaseConfig{
+			Host:     getEnv("DB_HOST", "localhost"),
+			Port:     getEnv("DB_PORT", "5432"),
+			User:     getEnv("DB_USER", "postgres"),
+			Password: getEnv("DB_PASSWORD", ""),
+			DBName:   getEnv("DB_NAME", "folder_system"),
+			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		},
+		JWT: JWTConfig{
+			AccessSecret:  getEnv("JWT_ACCESS_SECRET", "default_access_secret"),
+			RefreshSecret: getEnv("JWT_REFRESH_SECRET", "default_refresh_secret"),
+			AccessTTL:     getEnvAsInt("JWT_ACCESS_TTL", 15),
+			RefreshTTL:    getEnvAsInt("JWT_REFRESH_TTL", 10080),
+		},
+		Logging: LoggingConfig{
+			Level: getEnv("LOG_LEVEL", "debug"),
+			File:  getEnv("LOG_FILE", "app.log"),
+		},
+	}, nil
 }
 
-func (c *Config) SaveConfig(path string) error {
-	data, err := yaml.Marshal(c)
-	if err != nil {
-		return err
+// Вспомогательные функции
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
-	return os.WriteFile(path, data, 0644)
+	return defaultValue
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
 }

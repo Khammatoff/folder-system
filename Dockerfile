@@ -19,7 +19,7 @@ WORKDIR /app
 
 COPY --from=builder /app/main .
 COPY --from=builder /app/frontend ./frontend
-COPY config.yml .
+COPY .env .
 
 EXPOSE 8080
 

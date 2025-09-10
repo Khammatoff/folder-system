@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"folder-system/internal/config"
 	"folder-system/internal/handler"
@@ -14,11 +16,34 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	_ "github.com/lib/pq"
 )
+
+func waitForDB(dsn string, timeout time.Duration) error {
+	start := time.Now()
+	for {
+		db, err := sql.Open("postgres", dsn)
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+
+		if err := db.Ping(); err == nil {
+			return nil
+		}
+
+		if time.Since(start) > timeout {
+			return fmt.Errorf("timeout waiting for database after %v", timeout)
+		}
+
+		log.Printf("Waiting for database... (%v elapsed)", time.Since(start))
+		time.Sleep(2 * time.Second)
+	}
+}
 
 func main() {
 	// Load configuration
-	cfg, err := config.LoadConfig("config.yml")
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -33,6 +58,13 @@ func main() {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Database.Host, cfg.Database.Port, cfg.Database.User,
 		cfg.Database.Password, cfg.Database.DBName, cfg.Database.SSLMode)
+
+	// Wait for database to be ready
+	logger.Info("Waiting for database to be ready...")
+	if err := waitForDB(dsn, 60*time.Second); err != nil {
+		logger.Fatalf("Database not ready: %v", err)
+	}
+	logger.Info("Database is ready!")
 
 	// Initialize repository (PostgreSQL)
 	repo, err := postgresql.NewRepository(dsn)
