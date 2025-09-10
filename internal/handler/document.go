@@ -34,78 +34,88 @@ type UpdateDocumentRequest struct {
 func (h *DocumentHandler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 	var req CreateDocumentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.Title == "" || req.SheetsCount <= 0 {
-		http.Error(w, `{"error": "Title and positive sheets_count are required"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Title and positive sheets_count are required")
 		return
+	}
+
+	if req.DocumentTypeID == 0 {
+		req.DocumentTypeID = 1 // default document type id
 	}
 
 	document, err := h.documentService.CreateDocument(req.Title, req.SheetsCount, req.FolderID, req.DocumentTypeID)
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(document)
+	_ = json.NewEncoder(w).Encode(document)
 }
 
 func (h *DocumentHandler) GetDocument(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid document ID"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid document ID")
 		return
 	}
 
 	document, err := h.documentService.GetDocument(uint(id))
 	if err != nil {
-		http.Error(w, `{"error": "Document not found"}`, http.StatusNotFound)
+		WriteJSONError(w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(document)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(document); err != nil {
+		WriteJSONError(w, http.StatusInternalServerError, "Failed to encode response")
+		return
+	}
 }
 
 func (h *DocumentHandler) UpdateDocument(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid document ID"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid document ID")
 		return
 	}
 
 	var req UpdateDocumentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	document, err := h.documentService.UpdateDocument(uint(id), req.Title, req.SheetsCount, req.FolderID)
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(document)
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(document)
 }
 
 func (h *DocumentHandler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid document ID"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid document ID")
 		return
 	}
 
 	err = h.documentService.DeleteDocument(uint(id))
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

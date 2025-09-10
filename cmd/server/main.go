@@ -94,12 +94,12 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(custommiddleware.LoggerMiddleware(logger))
 
-	// Public routes
+	// ✅ Public routes
 	r.Post("/api/register", handlers.AuthHandler().Register)
 	r.Post("/api/login", handlers.AuthHandler().Login)
 
-	// Protected routes
-	r.Route("/api", func(r chi.Router) {
+	// ✅ Protected routes (под /api/protected — или другой вложенный путь)
+	r.Route("/api/protected", func(r chi.Router) {
 		r.Use(custommiddleware.AuthMiddleware(cfg.JWT.AccessSecret))
 
 		// Document routes
@@ -114,6 +114,7 @@ func main() {
 		r.Route("/folders", func(r chi.Router) {
 			r.Get("/recommended", handlers.FolderHandler().GetRecommendedFolder)
 		})
+
 	})
 
 	// Serve frontend static files

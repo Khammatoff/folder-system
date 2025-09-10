@@ -1,4 +1,5 @@
 const API_BASE = 'http://localhost:8080/api';
+const PROTECTED_API = `${API_BASE}/protected`;
 let accessToken = localStorage.getItem('accessToken');
 
 function updateAuthStatus() {
@@ -123,12 +124,12 @@ async function createDocument() {
     }
     
     try {
-        const response = await makeRequest(`${API_BASE}/documents`, 'POST', body);
+        const response = await makeRequest(`${PROTECTED_API}/documents`, 'POST', body);
         if (response.ok) {
-            const document = await response.json();
+            const doc = await response.json();
             document.getElementById('docResult').innerHTML = `
                 <span class="success">Document created!</span>
-                <pre>${JSON.stringify(document, null, 2)}</pre>
+                <pre>${JSON.stringify(doc, null, 2)}</pre>
             `;
         } else {
             const error = await response.json();
@@ -144,11 +145,11 @@ async function getDocument() {
     const docId = document.getElementById('getDocId').value;
     
     try {
-        const response = await makeRequest(`${API_BASE}/documents/${docId}`, 'GET');
+        const response = await makeRequest(`${PROTECTED_API}/documents/${docId}`, 'GET');
         if (response.ok) {
-            const document = await response.json();
+            const doc = await response.json();
             document.getElementById('docResult').innerHTML = `
-                <pre>${JSON.stringify(document, null, 2)}</pre>
+                <pre>${JSON.stringify(doc, null, 2)}</pre>
             `;
         } else {
             const error = await response.json();
@@ -171,7 +172,7 @@ async function getRecommendation() {
             sheets_count: sheetsCount || '0'
         });
         
-        const response = await makeRequest(`${API_BASE}/folders/recommended?${params}`, 'GET');
+        const response = await makeRequest(`${PROTECTED_API}/folders/recommended?${params}`, 'GET');
         if (response.ok) {
             const folder = await response.json();
             if (folder) {
@@ -192,4 +193,6 @@ async function getRecommendation() {
 }
 
 // Initialize
-updateAuthStatus();
+document.addEventListener('DOMContentLoaded', () => {
+    updateAuthStatus();
+});

@@ -33,40 +33,41 @@ type TokenResponse struct {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.Email == "" || req.Password == "" {
-		http.Error(w, `{"error": "Email and password are required"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Email and password are required")
 		return
 	}
 
 	err := h.authService.Register(req.Email, req.Password)
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	if req.Email == "" || req.Password == "" {
-		http.Error(w, `{"error": "Email and password are required"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Email and password are required")
 		return
 	}
 
 	accessToken, refreshToken, err := h.authService.Login(req.Email, req.Password)
 	if err != nil {
-		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusUnauthorized)
+		WriteJSONError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
@@ -76,5 +77,5 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }

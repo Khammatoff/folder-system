@@ -21,21 +21,21 @@ func (h *FolderHandler) GetRecommendedFolder(w http.ResponseWriter, r *http.Requ
 	sheetsCountStr := r.URL.Query().Get("sheets_count")
 
 	if docTypeIDStr == "" {
-		http.Error(w, `{"error": "document_type_id query parameter is required"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "document_type_id query parameter is required")
 		return
 	}
 
 	docTypeID, err := strconv.ParseUint(docTypeIDStr, 10, 32)
 	if err != nil {
-		http.Error(w, `{"error": "Invalid document_type_id"}`, http.StatusBadRequest)
+		WriteJSONError(w, http.StatusBadRequest, "Invalid document_type_id")
 		return
 	}
 
-	sheetsCount := 0 // Default if not provided
+	sheetsCount := 0
 	if sheetsCountStr != "" {
 		sc, err := strconv.ParseInt(sheetsCountStr, 10, 32)
 		if err != nil {
-			http.Error(w, `{"error": "Invalid sheets_count"}`, http.StatusBadRequest)
+			WriteJSONError(w, http.StatusBadRequest, "Invalid sheets_count")
 			return
 		}
 		sheetsCount = int(sc)
@@ -43,12 +43,17 @@ func (h *FolderHandler) GetRecommendedFolder(w http.ResponseWriter, r *http.Requ
 
 	folder, err := h.folderService.GetRecommendedFolder(uint(docTypeID), sheetsCount)
 	if err != nil {
-		// "Not found" is an acceptable outcome, return null
+		// Not found is acceptable — return JSON null
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(nil)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("null"))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(folder)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(folder); err != nil {
+		WriteJSONError(w, http.StatusInternalServerError, "Failed to encode response")
+		return
+	}
 }

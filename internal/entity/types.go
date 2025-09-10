@@ -12,7 +12,6 @@ type FolderType struct {
 	Name string `gorm:"not null"`
 }
 
-// FolderTypeAssignment defines which folder types are acceptable for which document types.
 type FolderTypeAssignment struct {
 	gorm.Model
 	DocumentTypeID uint `gorm:"not null"`
