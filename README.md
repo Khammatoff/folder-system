@@ -33,7 +33,7 @@ Containerization: Docker + Docker Compose
 # 📦 Установка и запуск
 
 Клонируйте репозиторий
-git clone <repository-url>
+git clone https://github.com/Khammatoff/folder-system
 cd folder-system
 Настройте окружение
 ->
